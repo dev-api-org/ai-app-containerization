@@ -73,6 +73,9 @@ generation_config = {
     "max_output_tokens": 8192,
 }
 
+DEFAULT_STATUS_MESSAGE = "_Waiting for image upload..._"
+DEFAULT_RESULTS_MESSAGE = "_Upload an image and click 'Analyze Car' to see results..._"
+
 def validate_image(image_path):
     """Validate image file before processing."""
     # Check file exists
@@ -161,7 +164,7 @@ def analyze_car(image_path, progress=gr.Progress()):
     """Main function to analyze car images with comprehensive validation and error handling."""
     
     if image_path is None:
-        return "⚠️ Please upload an image first.", "_Waiting for image upload..._"
+        return "⚠️ Please upload an image first.", DEFAULT_STATUS_MESSAGE
     
     try:
         # Step 1: Validate image file
@@ -245,6 +248,12 @@ Be specific and detailed in your analysis. Format your response clearly."""
         return error_msg, "❌ **Analysis failed**\n\n_Please try again with a different image._"
 
 
+def handle_image_change(image_path):
+    if image_path is None:
+        return DEFAULT_RESULTS_MESSAGE, DEFAULT_STATUS_MESSAGE
+    return gr.update(), gr.update()
+
+
 # Custom CSS for minimal, clean design
 custom_css = """
 .gradio-container {
@@ -324,7 +333,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css=custom_css, title="AI Car Inspector")
         with gr.Column(scale=1):
             gr.Markdown("## ⚙️ Processing Status")
             status_box = gr.Markdown(
-                value="_Waiting for image upload..._"
+                value=DEFAULT_STATUS_MESSAGE
             )
     
     # Separator
@@ -334,12 +343,18 @@ with gr.Blocks(theme=gr.themes.Soft(), css=custom_css, title="AI Car Inspector")
     with gr.Column():
         gr.Markdown("## 📊 Analysis Results")
         output = gr.Markdown(
-            value="_Upload an image and click 'Analyze Car' to see results..._"
+            value=DEFAULT_RESULTS_MESSAGE
         )
     
     # Connect button to function
     analyze_btn.click(
         fn=analyze_car,
+        inputs=image_input,
+        outputs=[output, status_box]
+    )
+
+    image_input.change(
+        fn=handle_image_change,
         inputs=image_input,
         outputs=[output, status_box]
     )
