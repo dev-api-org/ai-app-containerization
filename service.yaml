@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gradio-gemini-service
+spec:
+  # Use LoadBalancer, which provisions a stable AWS Load Balancer
+  type: LoadBalancer 
+  selector:
+    app: gradio-gemini
+  ports:
+    - protocol: TCP
+      port: 80 # Public port
+      targetPort: 7860 # Container port

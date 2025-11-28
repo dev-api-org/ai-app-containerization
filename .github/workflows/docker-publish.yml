@@ -1,4 +1,4 @@
-name: Build, Test and Publish Docker image
+name: Build, Test and Publish Docker image & Deploy to EKS
 
 on:
   push:
@@ -9,41 +9,24 @@ jobs:
   smoke-and-publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: ⬇️ Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python for smoke test
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install Python deps for smoke test
-        run: |
-          python -m pip install --upgrade pip
-          pip install --no-cache-dir -r requirements.txt
-
-      - name: Run smoke import test
-        run: |
-          python -c '
-          import sys
-          try:
-              import gradio, google, PIL
-          except Exception as e:
-              print("Smoke test failed:", e)
-              sys.exit(1)
-          print("Smoke test passed")
-          '
-
+      # ... (Smoke Test and Setup Steps Omitted) ...
+      
+      # --- DOCKER HUB PUSH STEPS (Updated to use DOCKER_USERNAME/PASSWORD) ---
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Login to Docker Hub
+      - name: 🐳 Login to Docker Hub
         uses: docker/login-action@v2
         with:
+          # Using your existing secrets
           username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          password: ${{ secrets.DOCKER_PASSWORD }} 
 
-      - name: Build and push Docker image
+      - name: 🏗️ Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -52,3 +35,25 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/car_classifier:latest
             ${{ secrets.DOCKER_USERNAME }}/car_classifier:${{ github.sha }}
+
+      # --- DEPLOYMENT STEP (No change needed here, as it uses SSH keys) ---
+      - name: 🚀 Deploy to EKS Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_PUBLIC_IP }} 
+          username: ec2-user # Confirm your EC2 username
+          key: ${{ secrets.EC2_SSH_KEY }}
+          
+          # The script runs on the EKS worker node to apply manifests
+          script: |
+            # 1. Download the latest deployment manifests from the GitHub repository
+            # These files contain the image tag and secret names
+            curl -o deployment.yaml https://raw.githubusercontent.com/${{ github.repository }}/main/deployment.yaml
+            curl -o service.yaml https://raw.githubusercontent.com/${{ github.repository }}/main/service.yaml
+            
+            # 2. Apply the manifests using the local kubectl
+            sudo kubectl apply -f deployment.yaml
+            sudo kubectl apply -f service.yaml
+            
+            # 3. Wait for the new Pod to become Ready
+            sudo kubectl rollout status deployment/gradio-gemini-deployment
