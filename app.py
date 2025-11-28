@@ -139,27 +139,41 @@ Do not provide any explanation, just YES or NO."""
         raise
 
 
-def analyze_car(image_path):
+def analyze_car(image_path, progress=gr.Progress()):
     """Main function to analyze car images with comprehensive validation and error handling."""
     
     if image_path is None:
-        return "⚠️ Please upload an image first."
+        return "⚠️ Please upload an image first.", "_Waiting for image upload..._"
     
     try:
         # Step 1: Validate image file
+        progress(0, desc="📤 Uploading and validating image...")
         logger.info(f"Starting analysis for image: {image_path}")
+        
+        # Clear the waiting message immediately
+        status_update = "🔄 **Processing started...**\n\n"
+        
         image = validate_image(image_path)
         
+        status_update = f"✅ **Image validated successfully**\n- Size: {image.size[0]}x{image.size[1]}px\n- Format: {image.format}\n\n"
+        
         # Step 2: Verify if it's a car
+        progress(0.3, desc="🔍 Checking if image contains a car...")
         logger.info("Verifying if image contains a car...")
+        status_update += "🔍 **Verifying vehicle presence...**\n\n"
+        
         is_car = verify_car_in_image(image)
         
         if not is_car:
             logger.info("No car detected in image")
-            return "⚠️ **Not a Car Detected**\n\nPlease upload an image of a car, truck, SUV, or other motor vehicle for analysis."
+            return "⚠️ **Not a Car Detected**\n\nPlease upload an image of a car, truck, SUV, or other motor vehicle for analysis.", status_update + "❌ **No vehicle detected**\n\n_Upload a new image to try again._"
+        
+        status_update += "✅ **Car detected!**\n\n"
         
         # Step 3: Detailed car analysis
+        progress(0.6, desc="🤖 AI analyzing the vehicle...")
         logger.info("Car detected, performing detailed analysis...")
+        status_update += "🤖 **Performing detailed AI analysis...**\n\n"
         
         # Create a new model instance for thread safety
         model = genai.GenerativeModel(
@@ -183,7 +197,10 @@ Be specific and detailed in your analysis. Format your response clearly."""
         analysis_response = model.generate_content([analysis_prompt, image])
         analysis_text = analysis_response.text.strip()
         
+        progress(1.0, desc="✅ Analysis complete!")
         logger.info("Analysis completed successfully")
+        status_update += "✅ **Analysis completed successfully!**\n\n"
+        status_update += "👇 **Scroll down to view the detailed analysis results below.**"
         
         # Format the output
         result = f"""✅ **Car Detected Successfully!**
@@ -196,18 +213,18 @@ Be specific and detailed in your analysis. Format your response clearly."""
 *Powered by Gemini 2.0 Flash | Temperature: {TEMPERATURE}*
 """
         
-        return result
+        return result, status_update
     
     except ValueError as e:
         # Validation errors (user-friendly)
         logger.warning(f"Validation error: {str(e)}")
-        return f"⚠️ **Invalid Image**\n\n{str(e)}\n\nPlease upload a valid car image."
+        return f"⚠️ **Invalid Image**\n\n{str(e)}\n\nPlease upload a valid car image.", "❌ **Validation failed**\n\n_Upload a valid image to try again._"
     
     except Exception as e:
         # Unexpected errors
         logger.error(f"Error during analysis: {str(e)}", exc_info=True)
         error_msg = f"❌ **Error during analysis:**\n\n{str(e)}\n\nPlease try again with a different image."
-        return error_msg
+        return error_msg, "❌ **Analysis failed**\n\n_Please try again with a different image._"
 
 
 # Custom CSS for minimal, clean design
@@ -227,6 +244,14 @@ custom_css = """
     text-align: center;
     color: #666;
     margin-bottom: 2rem;
+}
+
+/* Center all headings */
+.gradio-container h1,
+.gradio-container h2,
+.gradio-container h3,
+.gradio-container h4 {
+    text-align: center;
 }
 
 .primary-btn {
@@ -253,7 +278,9 @@ with gr.Blocks(theme=gr.themes.Soft(), css=custom_css, title="AI Car Inspector")
         elem_id="description"
     )
     
+    # Upload and Status Section (Side by Side)
     with gr.Row():
+        # Upload Section
         with gr.Column(scale=1):
             image_input = gr.Image(
                 type="filepath",
@@ -275,33 +302,28 @@ with gr.Blocks(theme=gr.themes.Soft(), css=custom_css, title="AI Car Inspector")
                 """
             )
         
+        # Status Section
         with gr.Column(scale=1):
-            output = gr.Textbox(
-                label="📊 Analysis Results",
-                lines=20,
-                placeholder="Upload an image and click 'Analyze Car' to see results...",
-                show_copy_button=True
+            gr.Markdown("## ⚙️ Processing Status")
+            status_box = gr.Markdown(
+                value="_Waiting for image upload..._"
             )
     
-    # Examples section
-    gr.Markdown("### 💡 What You'll Get:")
-    gr.Markdown(
-        """
-        - ✅ Car verification (detects non-car images)
-        - 🏭 Make and manufacturer
-        - 🚙 Model and generation
-        - 📅 Year/era identification
-        - 🎨 Color and body type
-        - 🔍 Condition assessment
-        - ⚡ Unique features and facts
-        """
-    )
+    # Separator
+    gr.Markdown("---")
+    
+    # Results Section (Full Width)
+    with gr.Column():
+        gr.Markdown("## 📊 Analysis Results")
+        output = gr.Markdown(
+            value="_Upload an image and click 'Analyze Car' to see results..._"
+        )
     
     # Connect button to function
     analyze_btn.click(
         fn=analyze_car,
         inputs=image_input,
-        outputs=output
+        outputs=[output, status_box]
     )
 
 # Launch configuration
