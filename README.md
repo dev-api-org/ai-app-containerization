@@ -276,7 +276,4 @@ This project is for educational purposes as part of the DevOps Capstone project.
 ## 📧 Contact
 
 For questions or issues, please open an issue on GitHub.
-
----
-
-**Built with ❤️ for the DevOps Capstone Project**
+#Done by Dev-Api-Org
