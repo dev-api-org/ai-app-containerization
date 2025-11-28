@@ -1,22 +1,4 @@
 import os
-# Ensure compatibility with installed huggingface_hub versions that may
-# not expose `HfFolder` (which older/newer Gradio releases expect).
-# If the symbol is missing, add a lightweight shim so Gradio's import
-# doesn't fail inside the container. This keeps the app robust across
-# minor dependency mismatches during CI/build.
-try:
-    import huggingface_hub as _hf_hub
-    if not hasattr(_hf_hub, "HfFolder"):
-        class HfFolder:
-            @staticmethod
-            def path():
-                return None
-        _hf_hub.HfFolder = HfFolder
-except Exception:
-    # If huggingface_hub isn't installed yet, we'll rely on the normal
-    # import path to raise an error later during startup.
-    pass
-
 import gradio as gr
 import google.generativeai as genai
 from PIL import Image
