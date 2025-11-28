@@ -1,0 +1,15 @@
+venv
+venv_clean
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.env.*
+.git
+.github
+.DS_Store
+node_modules
+dist
+build
+*.egg-info
