@@ -36,8 +36,6 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/car_classifier:latest
             ${{ secrets.DOCKER_USERNAME }}/car_classifier:${{ github.sha }}
-
-  ---
   
   # ================================================================= #
   # 2. CD PHASE: DEPLOY TO SINGLE EC2 HOST (Free Tier Recommended)    #
