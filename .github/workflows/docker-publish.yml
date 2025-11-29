@@ -94,7 +94,7 @@ jobs:
           echo "Running new container $IMAGE_NAME on port $HOST_PORT:$CONTAINER_PORT"
           sudo docker run -d \
           -p $HOST_PORT:$CONTAINER_PORT \
-          -p 6443:6443 \
+          -e GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" \
           --name $APP_NAME \
           --restart always \
           $IMAGE_NAME
